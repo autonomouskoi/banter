@@ -1,0 +1,45 @@
+syntax = "proto3";
+package banter;
+
+option go_package = "github.com/autonomouskoi/banter";
+
+enum BusTopic {
+   BANTER_ANNOUNCE_EVENT   = 0;
+   BANTER_ANNOUNCE_REQUEST = 1;
+   BANTER_ANNOUNCE_COMMAND = 2; 
+}
+
+message Banter {
+    string  command  = 1;
+    string  text     = 2;
+    bool    disabled = 3;
+    bool    announce = 4;
+}
+
+message Config {
+              uint32  interval_seconds = 1;
+              uint32  cooldown_seconds = 2;
+    repeated  Banter  banters          = 3;
+}
+
+enum MessageTypeRequest {
+    CONFIG_GET_REQ  = 0;
+    CONFIG_GET_RESP = 1;
+}
+
+message ConfigGetRequest { }
+message ConfigGetResponse {
+    Config  config = 1;
+}
+
+enum MessageTypeCommand {
+    CONFIG_SET_REQ  = 0;
+    CONFIG_SET_RESP = 1;
+}
+
+message ConfigSetRequest {
+    Config config = 1;
+}
+message ConfigSetResponse {
+    Config config = 1;
+}
