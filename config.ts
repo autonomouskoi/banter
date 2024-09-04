@@ -115,18 +115,18 @@ class Config extends HTMLElement {
 }
 </style>
 <fieldset id="fs-announce-cfg">
-<legend>Announcement Configuration</legend>
+<legend>Random Command Configuration</legend>
 
-<label for="input-interval-seconds">Announce Interval (seconds)</label>
+<label for="input-interval-seconds">Random Command Interval (seconds)</label>
 <input id="input-interval-seconds" type="text"
     inputmode="numeric" pattern="\d+" size="4" placeholder="300"
-    title="How long between chat announcments""
+    title="How long between random chat commands""
 />
 
-<label for="input-cooldown-seconds">Announce Cooldown (seconds)</label>
+<label for="input-cooldown-seconds">Random Command Cooldown (seconds)</label>
 <input id="input-cooldown-seconds" type="type"
     inputmode="numeric" pattern="\d+" size="4" placeholder="900"
-    title="Minimum time before repeating a given announcement"
+    title="Minimum time before repeating a given random command"
 />
 
 </fieldset>
@@ -155,7 +155,7 @@ class Config extends HTMLElement {
     <th>Command</th>
     <th>Text</th>
     <th>Enabled</th>
-    <th>Announced</th>
+    <th>Random</th>
     <th>Edit</th>
 </tr>
 `;
