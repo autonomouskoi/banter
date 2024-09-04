@@ -4,16 +4,16 @@ package banter;
 option go_package = "github.com/autonomouskoi/banter";
 
 enum BusTopic {
-   BANTER_ANNOUNCE_EVENT   = 0;
-   BANTER_ANNOUNCE_REQUEST = 1;
-   BANTER_ANNOUNCE_COMMAND = 2; 
+   BANTER_EVENT   = 0;
+   BANTER_REQUEST = 1;
+   BANTER_COMMAND = 2; 
 }
 
 message Banter {
     string  command  = 1;
     string  text     = 2;
     bool    disabled = 3;
-    bool    announce = 4;
+    bool    random   = 4;
 }
 
 message Config {

@@ -4,9 +4,7 @@ import * as buspb from "/pb/bus/bus_pb.js";
 import * as banterpb from "/m/banter/pb/banter_pb.js";
 import * as config from "./config.js";
 
-const TOPIC_BANTER_EVENT = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_ANNOUNCE_EVENT);
-const TOPIC_BANTER_REQUEST = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_ANNOUNCE_REQUEST);
-const TOPIC_BANTER_COMMAND = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_ANNOUNCE_COMMAND);
+const TOPIC_BANTER_REQUEST = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_REQUEST);
 
 function start(mainContainer: HTMLElement) {
     document.querySelector("title").innerText = 'Twitch Chat Announce';

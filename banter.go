@@ -111,7 +111,7 @@ func (bb *Banterer) writeCfg() {
 }
 
 func (bb *Banterer) handleRequests(ctx context.Context) error {
-	bb.bus.HandleTypes(ctx, BusTopic_BANTER_ANNOUNCE_REQUEST.String(), 8,
+	bb.bus.HandleTypes(ctx, BusTopic_BANTER_REQUEST.String(), 8,
 		map[int32]bus.MessageHandler{
 			int32(MessageTypeRequest_CONFIG_GET_REQ): bb.handleRequestConfigGet,
 		},
@@ -134,7 +134,7 @@ func (bb *Banterer) handleRequestConfigGet(msg *bus.BusMessage) *bus.BusMessage 
 }
 
 func (bb *Banterer) handleCommands(ctx context.Context) error {
-	bb.bus.HandleTypes(ctx, BusTopic_BANTER_ANNOUNCE_COMMAND.String(), 4,
+	bb.bus.HandleTypes(ctx, BusTopic_BANTER_COMMAND.String(), 4,
 		map[int32]bus.MessageHandler{
 			int32(MessageTypeCommand_CONFIG_SET_REQ): bb.handleCommandConfigSet,
 		},
@@ -266,7 +266,7 @@ func (bb *Banterer) sendRandAnnouncement() {
 	var eligible []*Banter
 	bb.lock.Lock()
 	for _, banter := range bb.cfg.Banters {
-		if banter.Disabled || !banter.Announce {
+		if banter.Disabled || !banter.Random {
 			continue
 		}
 		if bb.cooldowns[banter.Command].After(now) {

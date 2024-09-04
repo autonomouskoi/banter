@@ -2,13 +2,13 @@ import { bus, enumName } from "/bus.js";
 import * as buspb from "/pb/bus/bus_pb.js";
 import * as banterpb from '/m/banter/pb/banter_pb.js';
 
-const TOPIC_BANTER_COMMAND = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_ANNOUNCE_COMMAND);
+const TOPIC_BANTER_COMMAND = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_COMMAND);
 
 class BanterRow extends HTMLTableRowElement {
     private _input_command: HTMLInputElement;
     private _input_text: HTMLInputElement;
     private _check_enabled: HTMLInputElement;
-    private _check_announce: HTMLInputElement;
+    private _check_random: HTMLInputElement;
     private _button_edit: HTMLButtonElement;
     private _button_delete: HTMLButtonElement;
     private _orig: banterpb.Banter;
@@ -23,7 +23,7 @@ class BanterRow extends HTMLTableRowElement {
 <td><input id="command" type="text" size="16" disabled /></td>
 <td><input id="text" type="text" size="48" disabled /></td>
 <td><input id="enabled" type="checkbox" disabled /></td>
-<td><input id="announce" type="checkbox" disabled /></td>
+<td><input id="random" type="checkbox" disabled /></td>
 <td>
     <button id="btn-edit">Edit</button>
     <button id="btn-delete">Delete</button>
@@ -33,7 +33,7 @@ class BanterRow extends HTMLTableRowElement {
         this._input_command = this.querySelector('#command');
         this._input_text = this.querySelector('#text');
         this._check_enabled = this.querySelector('#enabled');
-        this._check_announce = this.querySelector('#announce');
+        this._check_random = this.querySelector('#random');
         this._button_edit = this.querySelector('#btn-edit');
         this._button_edit.onclick = () => this.startEdit();
         this._button_delete = this.querySelector('#btn-delete');
@@ -45,13 +45,13 @@ class BanterRow extends HTMLTableRowElement {
         this._input_command.value = banter.command;
         this._input_text.value = banter.text;
         this._check_enabled.checked = !banter.disabled;
-        this._check_announce.checked = banter.announce;
+        this._check_random.checked = banter.random;
     }
 
     private set editable(enabled: boolean) {
         this._input_command.disabled = !enabled;
         this._input_text.disabled = !enabled;
-        this._check_announce.disabled = !enabled;
+        this._check_random.disabled = !enabled;
         this._check_enabled.disabled = !enabled;
     }
 
@@ -84,7 +84,7 @@ class BanterRow extends HTMLTableRowElement {
         let newBanter = this._orig.clone();
         newBanter.command = this._input_command.value;
         newBanter.text = this._input_text.value;
-        newBanter.announce = this._check_announce.checked;
+        newBanter.random = this._check_random.checked;
         newBanter.disabled = !this._check_enabled.checked;
         this.onsave(newBanter);
     }
