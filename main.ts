@@ -7,7 +7,7 @@ import * as config from "./config.js";
 const TOPIC_BANTER_REQUEST = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_REQUEST);
 
 function start(mainContainer: HTMLElement) {
-    document.querySelector("title").innerText = 'Twitch Chat Announce';
+    document.querySelector("title").innerText = 'Banter';
 
     let cfgElem = new config.Config();
 
