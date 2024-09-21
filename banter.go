@@ -39,6 +39,11 @@ func init() {
 		Description: "Custom commands and periodic messages in Twitch Chat",
 		WebPaths: []*modules.ManifestWebPath{
 			{
+				Path:        "https://autonomouskoi.org/mod-banter.html",
+				Type:        modules.ManifestWebPathType_MANIFEST_WEB_PATH_TYPE_HELP,
+				Description: "Help!",
+			},
+			{
 				Path:        "/m/banter/",
 				Type:        modules.ManifestWebPathType_MANIFEST_WEB_PATH_TYPE_EMBED_CONTROL,
 				Description: "Controls for Banter",
