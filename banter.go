@@ -1,6 +1,7 @@
 package banter
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -29,7 +31,8 @@ const (
 )
 
 var (
-	cfgKVKey = []byte("config")
+	cfgKVKey           = []byte("config")
+	topicTwitchRequest = twitch.BusTopics_TWITCH_REQUEST.String()
 )
 
 func init() {
@@ -60,10 +63,11 @@ type Banterer struct {
 	http.Handler
 	bus *bus.Bus
 	modutil.ModuleBase
-	lock      sync.Mutex
-	kv        kv.KVPrefix
-	cfg       *Config
-	cooldowns map[string]time.Time
+	lock          sync.Mutex
+	kv            kv.KVPrefix
+	cfg           *Config
+	cooldowns     map[string]time.Time
+	twitchProfile string
 }
 
 func (bb *Banterer) Start(ctx context.Context, deps *modutil.ModuleDeps) error {
@@ -83,6 +87,34 @@ func (bb *Banterer) Start(ctx context.Context, deps *modutil.ModuleDeps) error {
 		return fmt.Errorf("get web FS %w", err)
 	}
 	bb.Handler = http.StripPrefix("/m/banter", http.FileServer(fs))
+
+	bb.Log.Debug("waiting for topic", "topic", topicTwitchRequest)
+	if err := bb.bus.WaitForTopic(ctx, topicTwitchRequest, time.Millisecond*10); err != nil {
+		return fmt.Errorf("waiting for %s: %w", topicTwitchRequest, err)
+	}
+
+	// pick a twitch profile
+	msg := &bus.BusMessage{
+		Topic: topicTwitchRequest,
+		Type:  int32(twitch.MessageTypeRequest_TYPE_REQUEST_LIST_PROFILES_REQ),
+	}
+	if bb.MarshalMessage(msg, &twitch.ListProfilesRequest{}); msg.Error != nil {
+		return msg.Error
+	}
+	reply := bb.bus.WaitForReply(ctx, msg)
+	if reply.Error != nil {
+		return fmt.Errorf("listing twitch profiles: %w", err)
+	}
+	lpr := &twitch.ListProfilesResponse{}
+	if err := bb.UnmarshalMessage(reply, lpr); err != nil {
+		return fmt.Errorf("unmarshalling: %w", err)
+	}
+	if len(lpr.GetNames()) == 0 {
+		return fmt.Errorf("no twitch profiles available")
+	}
+	for _, bb.twitchProfile = range lpr.GetNames() {
+		break // just pick the first
+	}
 
 	eg := errgroup.Group{}
 	eg.Go(func() error { return bb.handleRequests(ctx) })
@@ -201,17 +233,18 @@ func (bb *Banterer) handleChatMessageIn(msg *bus.BusMessage) *bus.BusMessage {
 		bb.handleChatBanterList()
 		return nil
 	}
+	cmd, _, _ := strings.Cut(text, " ")
 	var matchedBanter *Banter
 	bb.lock.Lock()
 	for _, banter := range bb.cfg.Banters {
-		if banter.Command == text {
+		if banter.Command == cmd {
 			matchedBanter = banter
 			break
 		}
 	}
 	bb.lock.Unlock()
 	if matchedBanter != nil {
-		bb.sendBanter(matchedBanter)
+		bb.sendBanter(matchedBanter, cmi)
 	}
 
 	return nil
@@ -248,9 +281,40 @@ func (bb *Banterer) periodicSend(ctx context.Context, interval time.Duration) {
 	}
 }
 
-func (bb *Banterer) sendBanter(banter *Banter) {
-	// TODO: banter text processing
-	bb.sendChat(banter.Text)
+type banterMessage struct {
+	Sender      *twitch.User
+	Original    *twitch.TwitchChatEventMessageIn
+	PostCommand string
+}
+
+func (bb *Banterer) sendBanter(banter *Banter, original *twitch.TwitchChatEventMessageIn) {
+	text := banter.Text
+	if original != nil && strings.Contains(text, "{{") {
+		bb.Log.Debug("handling template message", "text", banter.Text)
+		tmpl, err := template.New("").Parse(text)
+		if err != nil {
+			bb.Log.Error("parsing template", "command", banter.Command, "template", text, "error", err.Error())
+			return
+		}
+		sender, err := twitch.GetUser(context.Background(), bb.bus, bb.twitchProfile, original.GetNick())
+		if err != nil {
+			bb.Log.Error("getting twitch user", "login", original.GetNick(), "error", err.Error())
+			return
+		}
+		bm := banterMessage{
+			Original:    original,
+			PostCommand: strings.TrimSpace(strings.TrimPrefix(original.Text, banter.Command)),
+			Sender:      sender,
+		}
+		buf := &bytes.Buffer{}
+		if err := tmpl.Execute(buf, bm); err != nil {
+			bb.Log.Error("executing template", "command", banter.Command, "template", text, "error", err.Error())
+			return
+		}
+		text = buf.String()
+		bb.Log.Debug("processed message", "text", text)
+	}
+	bb.sendChat(text)
 	bb.cooldowns[banter.Command] = time.Now().Add(time.Second * time.Duration(bb.cfg.CooldownSeconds))
 }
 
@@ -287,7 +351,7 @@ func (bb *Banterer) sendRandAnnouncement() {
 
 	idx := rand.Int31n(int32(len(eligible)))
 	selected := eligible[idx]
-	bb.sendBanter(selected)
+	bb.sendBanter(selected, nil)
 }
 
 /*
