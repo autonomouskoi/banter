@@ -215,9 +215,9 @@ func (bb *Banterer) handleCommandConfigSet(msg *bus.BusMessage) *bus.BusMessage 
 }
 
 func (bb *Banterer) handleChat(ctx context.Context) error {
-	bb.bus.HandleTypes(ctx, twitch.BusTopics_TWITCH_CHAT_EVENT.String(), 4,
+	bb.bus.HandleTypes(ctx, twitch.BusTopics_TWITCH_EVENTSUB_EVENT.String(), 4,
 		map[int32]bus.MessageHandler{
-			int32(twitch.MessageTypeTwitchChatEvent_TWITCH_CHAT_EVENT_TYPE_MESSAGE_IN): bb.handleChatMessageIn,
+			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_CHAT_MESSAGE): bb.handleChatMessageIn,
 		},
 		nil,
 	)
@@ -225,15 +225,14 @@ func (bb *Banterer) handleChat(ctx context.Context) error {
 }
 
 func (bb *Banterer) handleChatMessageIn(msg *bus.BusMessage) *bus.BusMessage {
-	cmi := &twitch.TwitchChatEventMessageIn{}
-	if err := proto.Unmarshal(msg.GetMessage(), cmi); err != nil {
-		bb.Log.Error("unmarshalling", "type", cmi.ProtoReflect().Descriptor().Name(), "error", err.Error())
+	ccm := &twitch.EventChannelChatMessage{}
+	if err := bb.UnmarshalMessage(msg, ccm); err != nil {
 		return nil
 	}
-	if !strings.HasPrefix(cmi.Text, "!") {
+	if !strings.HasPrefix(ccm.Message.Text, "!") {
 		return nil
 	}
-	text := strings.ToLower(cmi.Text)
+	text := strings.ToLower(ccm.Message.Text)
 	if text == "!banter" {
 		bb.handleChatBanterList()
 		return nil
@@ -249,7 +248,7 @@ func (bb *Banterer) handleChatMessageIn(msg *bus.BusMessage) *bus.BusMessage {
 	}
 	bb.lock.Unlock()
 	if matchedBanter != nil {
-		bb.sendBanter(matchedBanter, cmi)
+		bb.sendBanter(matchedBanter, ccm)
 	}
 
 	return nil
@@ -288,11 +287,11 @@ func (bb *Banterer) periodicSend(ctx context.Context, interval time.Duration) {
 
 type banterMessage struct {
 	Sender      *twitch.User
-	Original    *twitch.TwitchChatEventMessageIn
+	Original    *twitch.EventChannelChatMessage
 	PostCommand string
 }
 
-func (bb *Banterer) sendBanter(banter *Banter, original *twitch.TwitchChatEventMessageIn) {
+func (bb *Banterer) sendBanter(banter *Banter, original *twitch.EventChannelChatMessage) {
 	text := banter.Text
 	if original != nil && strings.Contains(text, "{{") {
 		bb.Log.Debug("handling template message", "text", banter.Text)
@@ -301,14 +300,14 @@ func (bb *Banterer) sendBanter(banter *Banter, original *twitch.TwitchChatEventM
 			bb.Log.Error("parsing template", "command", banter.Command, "template", text, "error", err.Error())
 			return
 		}
-		sender, err := twitch.GetUser(context.Background(), bb.bus, bb.twitchProfile, original.GetNick())
+		sender, err := twitch.GetUser(context.Background(), bb.bus, bb.twitchProfile, original.GetChatter().Name)
 		if err != nil {
-			bb.Log.Error("getting twitch user", "login", original.GetNick(), "error", err.Error())
+			bb.Log.Error("getting twitch user", "login", original.GetChatter().Name, "error", err.Error())
 			return
 		}
 		bm := banterMessage{
 			Original:    original,
-			PostCommand: strings.TrimSpace(strings.TrimPrefix(original.Text, banter.Command)),
+			PostCommand: strings.TrimSpace(strings.TrimPrefix(original.GetMessage().Text, banter.Command)),
 			Sender:      sender,
 		}
 		buf := &bytes.Buffer{}
