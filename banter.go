@@ -302,7 +302,7 @@ func (bb *Banterer) sendBanter(banter *Banter, original *twitch.EventChannelChat
 		}
 		sender, err := twitch.GetUser(context.Background(), bb.bus, bb.twitchProfile, original.GetChatter().Name)
 		if err != nil {
-			bb.Log.Error("getting twitch user", "login", original.GetChatter().Name, "error", err.Error())
+			bb.Log.Error("getting twitch user", "login", original.GetChatter().Name, "error", err.Error(), "profile", bb.twitchProfile)
 			return
 		}
 		bm := banterMessage{
