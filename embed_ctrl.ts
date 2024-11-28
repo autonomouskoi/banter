@@ -7,8 +7,6 @@ import * as config from "./config.js";
 const TOPIC_BANTER_REQUEST = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_REQUEST);
 
 function start(mainContainer: HTMLElement) {
-    document.querySelector("title").innerText = 'Banter';
-
     let cfgElem = new config.Config();
 
     bus.waitForTopic(TOPIC_BANTER_REQUEST, 5000)
