@@ -125,6 +125,7 @@ func (bb *Banterer) Start(ctx context.Context, deps *modutil.ModuleDeps) error {
 	eg.Go(func() error { return bb.handleRequests(ctx) })
 	eg.Go(func() error { return bb.handleCommands(ctx) })
 	eg.Go(func() error { return bb.handleChat(ctx) })
+	eg.Go(func() error { return bb.handleTwitchEvents(ctx) })
 	eg.Go(func() error { bb.periodicSend(ctx, time.Second); return nil })
 
 	return eg.Wait()
