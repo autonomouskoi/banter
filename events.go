@@ -13,11 +13,10 @@ import (
 func (bb *Banterer) handleTwitchEvents(ctx context.Context) error {
 	bb.bus.HandleTypes(ctx, twitch.BusTopics_TWITCH_EVENTSUB_EVENT.String(), 8,
 		map[int32]bus.MessageHandler{
-			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_RAID):                bb.handleChannelRaid,
-			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_FOLLOW):              bb.handleChannelFollow,
-			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_CHEER):               bb.handleChannelCheer,
-			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_POINT_CUSTOM_REDEEM): bb.handleChannelPointsCustomRedeem,
-			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_CHAT_MESSAGE):        bb.handleChatMessageIn,
+			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_RAID):         bb.handleChannelRaid,
+			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_FOLLOW):       bb.handleChannelFollow,
+			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_CHEER):        bb.handleChannelCheer,
+			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_CHAT_MESSAGE): bb.handleChatMessageIn,
 		},
 		nil)
 	return nil
@@ -30,11 +29,6 @@ func (bb *Banterer) handleChannelRaid(msg *bus.BusMessage) *bus.BusMessage {
 
 func (bb *Banterer) handleChannelFollow(msg *bus.BusMessage) *bus.BusMessage {
 	bb.handleChannelEvent(msg, bb.cfg.ChannelFollow, &twitch.EventChannelFollow{})
-	return nil
-}
-
-func (bb *Banterer) handleChannelPointsCustomRedeem(msg *bus.BusMessage) *bus.BusMessage {
-	bb.handleChannelEvent(msg, bb.cfg.ChannelPointsCustomRedeem, &twitch.EventChannelPointsCustomRewardRedemption{})
 	return nil
 }
 

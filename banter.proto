@@ -22,13 +22,12 @@ message EventSettings {
 }
 
 message Config {
-              uint32         interval_seconds             = 1;
-              uint32         cooldown_seconds             = 2;
-    repeated  Banter         banters                      = 3;
-              EventSettings  channel_raid                 = 4;
-              EventSettings  channel_follow               = 5;
-              EventSettings  channel_cheer                = 6;
-              EventSettings  channel_points_custom_redeem = 7;
+              uint32         interval_seconds = 1;
+              uint32         cooldown_seconds = 2;
+    repeated  Banter         banters          = 3;
+              EventSettings  channel_raid     = 4;
+              EventSettings  channel_follow   = 5;
+              EventSettings  channel_cheer    = 6;
 }
 
 enum MessageTypeRequest {

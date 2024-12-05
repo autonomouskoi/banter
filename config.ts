@@ -285,12 +285,6 @@ class Config extends HTMLElement {
             this._save();
         }
         this._event_rows['Cheer'] = cheer;
-        let redeem = new EventRow({ name: 'Custom Points Redeem', settings: this._config.channelPointsCustomRedeem });
-        redeem.onsave = (es) => {
-            this._config.channelPointsCustomRedeem = es;
-            this._save();
-        }
-        this._event_rows['CustomRedeem'] = redeem;
 
         Object.keys(this._event_rows).forEach((key) => {
             let er = this._event_rows[key];
