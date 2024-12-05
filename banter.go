@@ -124,7 +124,6 @@ func (bb *Banterer) Start(ctx context.Context, deps *modutil.ModuleDeps) error {
 	eg := errgroup.Group{}
 	eg.Go(func() error { return bb.handleRequests(ctx) })
 	eg.Go(func() error { return bb.handleCommands(ctx) })
-	eg.Go(func() error { return bb.handleChat(ctx) })
 	eg.Go(func() error { return bb.handleTwitchEvents(ctx) })
 	eg.Go(func() error { bb.periodicSend(ctx, time.Second); return nil })
 
@@ -213,16 +212,6 @@ func (bb *Banterer) handleCommandConfigSet(msg *bus.BusMessage) *bus.BusMessage 
 		Config: bb.cfg,
 	})
 	return reply
-}
-
-func (bb *Banterer) handleChat(ctx context.Context) error {
-	bb.bus.HandleTypes(ctx, twitch.BusTopics_TWITCH_EVENTSUB_EVENT.String(), 4,
-		map[int32]bus.MessageHandler{
-			int32(twitch.MessageTypeEventSub_TYPE_CHANNEL_CHAT_MESSAGE): bb.handleChatMessageIn,
-		},
-		nil,
-	)
-	return nil
 }
 
 func (bb *Banterer) handleChatMessageIn(msg *bus.BusMessage) *bus.BusMessage {
