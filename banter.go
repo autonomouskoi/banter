@@ -1,3 +1,4 @@
+// Package banter provides automation for Twitch chat.
 package banter
 
 import (
@@ -27,6 +28,8 @@ import (
 )
 
 const (
+	// EnvLocalContentPath specifies an env var that, if set, provides a path
+	// to serve web content from instead of the embedded zip
 	EnvLocalContentPath = "AK_CONTENT_BANTER"
 )
 
@@ -64,6 +67,7 @@ func init() {
 //go:embed web.zip
 var webZip []byte
 
+// Banterer is the module
 type Banterer struct {
 	http.Handler
 	bus *bus.Bus
@@ -71,10 +75,11 @@ type Banterer struct {
 	lock          sync.Mutex
 	kv            kv.KVPrefix
 	cfg           *Config
-	cooldowns     map[string]time.Time
+	cooldowns     map[string]time.Time // random messages on cooldown aren't repeated
 	twitchProfile string
 }
 
+// Start banter
 func (bb *Banterer) Start(ctx context.Context, deps *modutil.ModuleDeps) error {
 	bb.bus = deps.Bus
 	bb.Log = deps.Log
@@ -93,6 +98,8 @@ func (bb *Banterer) Start(ctx context.Context, deps *modutil.ModuleDeps) error {
 	}
 	bb.Handler = http.StripPrefix("/m/banter", http.FileServer(fs))
 
+	// we can't do anything without knowing which twitch profile we're going to
+	// use. Wait for it to be ready
 	bb.Log.Debug("waiting for topic", "topic", topicTwitchRequest)
 	if err := bb.bus.WaitForTopic(ctx, topicTwitchRequest, time.Millisecond*10); err != nil {
 		return fmt.Errorf("waiting for %s: %w", topicTwitchRequest, err)
@@ -118,7 +125,7 @@ func (bb *Banterer) Start(ctx context.Context, deps *modutil.ModuleDeps) error {
 		return fmt.Errorf("no twitch profiles available")
 	}
 	for _, bb.twitchProfile = range lpr.GetNames() {
-		break // just pick the first
+		break // just pick the first. In the future let the user pick
 	}
 
 	eg := errgroup.Group{}
@@ -152,6 +159,7 @@ func (bb *Banterer) writeCfg() {
 	}
 }
 
+// handle messages on the request topic
 func (bb *Banterer) handleRequests(ctx context.Context) error {
 	bb.bus.HandleTypes(ctx, BusTopic_BANTER_REQUEST.String(), 8,
 		map[int32]bus.MessageHandler{
@@ -162,6 +170,7 @@ func (bb *Banterer) handleRequests(ctx context.Context) error {
 	return nil
 }
 
+// provide the config on request
 func (bb *Banterer) handleRequestConfigGet(msg *bus.BusMessage) *bus.BusMessage {
 	reply := &bus.BusMessage{
 		Topic: msg.GetTopic(),
@@ -175,6 +184,7 @@ func (bb *Banterer) handleRequestConfigGet(msg *bus.BusMessage) *bus.BusMessage 
 	return reply
 }
 
+// handle messages on the command topic
 func (bb *Banterer) handleCommands(ctx context.Context) error {
 	bb.bus.HandleTypes(ctx, BusTopic_BANTER_COMMAND.String(), 4,
 		map[int32]bus.MessageHandler{
@@ -185,6 +195,7 @@ func (bb *Banterer) handleCommands(ctx context.Context) error {
 	return nil
 }
 
+// update the stored config
 func (bb *Banterer) handleCommandConfigSet(msg *bus.BusMessage) *bus.BusMessage {
 	reply := &bus.BusMessage{
 		Topic: msg.GetTopic(),
@@ -214,6 +225,7 @@ func (bb *Banterer) handleCommandConfigSet(msg *bus.BusMessage) *bus.BusMessage 
 	return reply
 }
 
+// handle a received chat message
 func (bb *Banterer) handleChatMessageIn(msg *bus.BusMessage) *bus.BusMessage {
 	ccm := &twitch.EventChannelChatMessage{}
 	if err := bb.UnmarshalMessage(msg, ccm); err != nil {
@@ -244,6 +256,7 @@ func (bb *Banterer) handleChatMessageIn(msg *bus.BusMessage) *bus.BusMessage {
 	return nil
 }
 
+// handle the banter command to list banters
 func (bb *Banterer) handleChatBanterList() {
 	var commands []string
 	bb.lock.Lock()
@@ -256,6 +269,7 @@ func (bb *Banterer) handleChatBanterList() {
 	bb.sendChat("Commands: " + strings.Join(commands, ", "))
 }
 
+// periodically send random messages
 func (bb *Banterer) periodicSend(ctx context.Context, interval time.Duration) {
 	lastSend := time.Now()
 	ticker := time.NewTicker(interval)
@@ -275,14 +289,19 @@ func (bb *Banterer) periodicSend(ctx context.Context, interval time.Duration) {
 	}
 }
 
+// banterMessage carries details of a message to send to chat to be processed
+// by the user's template
 type banterMessage struct {
 	Sender      *twitch.User
 	Original    *twitch.EventChannelChatMessage
 	PostCommand string
 }
 
+// sendBanter composes and sends a banter chat message using the user-defined
+// template and details about the message that triggered it
 func (bb *Banterer) sendBanter(banter *Banter, original *twitch.EventChannelChatMessage) {
 	text := banter.Text
+	// if we have message details and it's a template it goes through processing
 	if original != nil && strings.Contains(text, "{{") {
 		bb.Log.Debug("handling template message", "text", banter.Text)
 		tmpl, err := template.New("").Parse(text)
@@ -290,6 +309,7 @@ func (bb *Banterer) sendBanter(banter *Banter, original *twitch.EventChannelChat
 			bb.Log.Error("parsing template", "command", banter.Command, "template", text, "error", err.Error())
 			return
 		}
+		// get details about the chatter
 		sender, err := twitch.GetUser(context.Background(), bb.bus, bb.twitchProfile, original.GetChatter().Name)
 		if err != nil {
 			bb.Log.Error("getting twitch user", "login", original.GetChatter().Name, "error", err.Error(), "profile", bb.twitchProfile)
@@ -309,9 +329,11 @@ func (bb *Banterer) sendBanter(banter *Banter, original *twitch.EventChannelChat
 		bb.Log.Debug("processed message", "text", text)
 	}
 	bb.sendChat(text)
+	// set a cooldown for this message
 	bb.cooldowns[banter.Command] = time.Now().Add(time.Second * time.Duration(bb.cfg.CooldownSeconds))
 }
 
+// send a message to Twitch chat using the twitch module
 func (bb *Banterer) sendChat(text string) {
 	msg := &bus.BusMessage{
 		Topic: twitch.BusTopics_TWITCH_CHAT_REQUEST.String(),
@@ -324,6 +346,8 @@ func (bb *Banterer) sendChat(text string) {
 
 }
 
+// sendRandAnnouncements triggers a randomly-selected banter. Banters on
+// cooldown or not marked Random are ineligible
 func (bb *Banterer) sendRandAnnouncement() {
 	now := time.Now()
 	var eligible []*Banter
@@ -347,25 +371,3 @@ func (bb *Banterer) sendRandAnnouncement() {
 	selected := eligible[idx]
 	bb.sendBanter(selected, nil)
 }
-
-/*
-func (s *spam) handle(msgIn *twitchchatpb.MessageIn) {
-	text := msgIn.Text
-	if !strings.HasPrefix(text, "!spam") {
-		return
-	}
-	args := strings.Split(text, " ")[1:]
-	if len(args) == 0 {
-		twitchchat.Send(s.bus, "Available spams: %s", strings.Join(s.spamKeys, ", "))
-		return
-	}
-	spamName := args[0]
-	spam, present := s.spams[spamName]
-	if !present {
-		twitchchat.Send(s.bus, "Available spams: %s", strings.Join(s.spamKeys, ", "))
-		return
-	}
-	s.cooldowns[spamName] = time.Now().Add(s.cooldown)
-	twitchchat.Send(s.bus, "[bot] "+spam)
-}
-*/

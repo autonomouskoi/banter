@@ -10,6 +10,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+// handle events from Twitch, including chat messages, raids, follows, and cheers
 func (bb *Banterer) handleTwitchEvents(ctx context.Context) error {
 	bb.bus.HandleTypes(ctx, twitch.BusTopics_TWITCH_EVENTSUB_EVENT.String(), 8,
 		map[int32]bus.MessageHandler{
@@ -37,6 +38,7 @@ func (bb *Banterer) handleChannelCheer(msg *bus.BusMessage) *bus.BusMessage {
 	return nil
 }
 
+// handle a raid, cheer, or follow using the appropriate template, if enabled
 func (bb *Banterer) handleChannelEvent(msg *bus.BusMessage, settings *EventSettings, data protoreflect.ProtoMessage) {
 	if !settings.Enabled || settings.Text == "" {
 		return

@@ -8,6 +8,7 @@ import (
 	"github.com/autonomouskoi/datastruct/mapset"
 )
 
+// Validate Banter's config
 func (cfg *Config) Validate() error {
 	if cfg.IntervalSeconds < 30 {
 		return errors.New("interval must be at least 30")
