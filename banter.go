@@ -96,7 +96,7 @@ func (bb *Banterer) Start(ctx context.Context, deps *modutil.ModuleDeps) error {
 	if err != nil {
 		return fmt.Errorf("get web FS %w", err)
 	}
-	bb.Handler = http.StripPrefix("/m/banter", http.FileServer(fs))
+	bb.Handler = http.FileServer(fs)
 
 	// we can't do anything without knowing which twitch profile we're going to
 	// use. Wait for it to be ready
