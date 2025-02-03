@@ -40,6 +40,7 @@ var (
 
 func init() {
 	manifest := &modules.Manifest{
+		Title:       "Banter",
 		Id:          "9472ec79f0843765",
 		Name:        "banter",
 		Description: "Custom commands and periodic messages in Twitch Chat",
