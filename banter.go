@@ -372,3 +372,10 @@ func (bb *Banterer) sendRandAnnouncement() {
 	selected := eligible[idx]
 	bb.sendBanter(selected, nil)
 }
+
+//go:embed icon.svg
+var icon []byte
+
+func (*Banterer) Icon() ([]byte, string, error) {
+	return icon, "image/svg+xml", nil
+}
