@@ -1,30 +1,26 @@
 import { bus, enumName } from "/bus.js";
-import * as buspb from "/pb/bus/bus_pb.js";
 
 import * as banterpb from "/m/banter/pb/banter_pb.js";
-import * as config from "./config.js";
+import { Cfg } from './controller.js';
+import { Random } from "./random.js";
+import { BanterMessages } from "./messages.js";
+import { Events } from "./events.js";
 
-const TOPIC_BANTER_REQUEST = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_REQUEST);
+const TOPIC_REQUEST = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_REQUEST);
 
 function start(mainContainer: HTMLElement) {
-    let cfgElem = new config.Config();
+    let cfg = new Cfg();
 
-    bus.waitForTopic(TOPIC_BANTER_REQUEST, 5000)
+    mainContainer.classList.add('flex-column');
+    mainContainer.style.setProperty('gap', '1rem');
+
+    bus.waitForTopic(TOPIC_REQUEST, 5000)
         .then(() => {
-            let msg = new buspb.BusMessage();
-            msg.topic = TOPIC_BANTER_REQUEST;
-            msg.type = banterpb.MessageTypeRequest.CONFIG_GET_REQ;
-            msg.message = new banterpb.ConfigGetRequest().toBinary();
-            bus.sendWithReply(msg, (reply: buspb.BusMessage) => {
-                if (reply.error) {
-                    throw reply.error;
-                }
-                let cgr = banterpb.ConfigGetResponse.fromBinary(reply.message);
-                cfgElem.config = cgr.config;
-                mainContainer.appendChild(cfgElem);
-            });
+            mainContainer.appendChild(new Random(cfg));
+            mainContainer.appendChild(new BanterMessages(cfg));
+            mainContainer.appendChild(new Events(cfg));
+            cfg.refresh();
         });
-
 }
 
 export { start };
