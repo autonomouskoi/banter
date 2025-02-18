@@ -21,13 +21,24 @@ message EventSettings {
     string  text    = 2;
 }
 
+message GuestList {
+    message Member {
+        string  login = 1;
+        string  id    = 2;
+    }
+    repeated  Member  members = 1;
+}
+
 message Config {
+    reserved 7;
+    
               uint32         interval_seconds = 1;
               uint32         cooldown_seconds = 2;
     repeated  Banter         banters          = 3;
               EventSettings  channel_raid     = 4;
               EventSettings  channel_follow   = 5;
               EventSettings  channel_cheer    = 6;
+    map<string, GuestList>   guest_lists      = 8;
 }
 
 enum MessageTypeRequest {
@@ -35,7 +46,7 @@ enum MessageTypeRequest {
     CONFIG_GET_RESP = 1;
 }
 
-message ConfigGetRequest { }
+message ConfigGetRequest {}
 message ConfigGetResponse {
     Config  config = 1;
 }
