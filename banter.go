@@ -15,7 +15,6 @@ import (
 	"text/template"
 	"time"
 
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/autonomouskoi/akcore"
@@ -129,13 +128,12 @@ func (bb *Banterer) Start(ctx context.Context, deps *modutil.ModuleDeps) error {
 		break // just pick the first. In the future let the user pick
 	}
 
-	eg := errgroup.Group{}
-	eg.Go(func() error { return bb.handleRequests(ctx) })
-	eg.Go(func() error { return bb.handleCommands(ctx) })
-	eg.Go(func() error { return bb.handleTwitchEvents(ctx) })
-	eg.Go(func() error { bb.periodicSend(ctx, time.Second); return nil })
+	bb.Go(func() error { return bb.handleRequests(ctx) })
+	bb.Go(func() error { return bb.handleCommands(ctx) })
+	bb.Go(func() error { return bb.handleTwitchEvents(ctx) })
+	bb.Go(func() error { bb.periodicSend(ctx, time.Second); return nil })
 
-	return eg.Wait()
+	return bb.Wait()
 }
 
 func (bb *Banterer) loadConfig() error {
@@ -175,7 +173,7 @@ func (bb *Banterer) handleRequests(ctx context.Context) error {
 func (bb *Banterer) handleRequestConfigGet(msg *bus.BusMessage) *bus.BusMessage {
 	reply := &bus.BusMessage{
 		Topic: msg.GetTopic(),
-		Type:  msg.Type + 1,
+		Type:  msg.GetType() + 1,
 	}
 	bb.lock.Lock()
 	bb.MarshalMessage(reply, &ConfigGetResponse{
@@ -344,7 +342,6 @@ func (bb *Banterer) sendChat(text string) {
 		Text: text,
 	})
 	bb.bus.Send(msg)
-
 }
 
 // sendRandAnnouncements triggers a randomly-selected banter. Banters on
