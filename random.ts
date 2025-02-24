@@ -1,3 +1,4 @@
+import { SectionHelp } from "/help.js";
 import * as banterpb from '/m/banter/pb/banter_pb.js';
 import { Cfg } from './controller.js';
 
@@ -11,7 +12,9 @@ class Random extends HTMLFieldSetElement {
         this._cfg = cfg;
 
         this.innerHTML = `
-<legend>Random Command Configuration</legend>
+<legend>Random Command Configuration &#9432;</legend>
+
+<div id="help"></div>
 
 <label for="input-interval-seconds">Command Interval (seconds)</label>
 <input id="input-interval-seconds" type="text"
@@ -26,6 +29,7 @@ class Random extends HTMLFieldSetElement {
 />
 `;
         this.classList.add('grid', 'grid-2-col');
+        this._setHelp();
         this._interval = this.querySelector('#input-interval-seconds');
         this._interval.addEventListener('change', () => this._save());
         this._cooldown = this.querySelector('#input-cooldown-seconds');
@@ -53,6 +57,34 @@ class Random extends HTMLFieldSetElement {
         cfg.intervalSeconds = interval;
         cfg.cooldownSeconds = cooldown;
         this._cfg.save(cfg);
+    }
+
+    private _setHelp() {
+        let helpToggle = this.querySelector('legend');
+
+        let helpHTML = document.createElement('div');
+        helpHTML.innerHTML = `
+<p>
+Each command can be set as <em>random</em>. At a configurable
+interval (e.g. every five minutes), <code>banter</code> will randomly select
+a custom command that is both <em>enabled</em> and set as <em>random</em> and
+send it to the channel.
+</p>
+
+<p>
+Random commands have a <em>cooldown</em> period. To avoid repeating a command
+too frequently, a command that's been used recently will not be eligible to be
+randomly sent for that cooldown period (e.g. 15 minutes). If all commands
+are on cooldown when <code>banter</code> attempts to send a random command
+nonne will be sent. Commands on cooldown can still be activated by users.
+</p>
+`;
+
+        let help = SectionHelp(helpToggle, helpHTML);
+        help.style.gridColumn = '1 / span 2';
+        help.style.width = '60rem';
+        let helpPlaceholder = this.querySelector('#help');
+        this.replaceChild(help, helpPlaceholder);
     }
 }
 customElements.define('banter-random', Random, {extends: 'fieldset'});

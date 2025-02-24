@@ -1,8 +1,8 @@
+import { SectionHelp } from "/help.js";
 import * as banterpb from '/m/banter/pb/banter_pb.js';
-import { GloballyStyledHTMLElement } from "/global-styles.js";
 import { Cfg } from './controller.js';
 
-class BanterMessages extends GloballyStyledHTMLElement {
+class BanterMessages extends HTMLFieldSetElement {
     private _table: HTMLTableElement;
     private _button: HTMLButtonElement;
 
@@ -13,16 +13,17 @@ class BanterMessages extends GloballyStyledHTMLElement {
         super();
         this._cfg = cfg;
 
-        this.shadowRoot.innerHTML = `
-<fieldset>
-<legend>Messages</legend>
+        this.innerHTML = `
+<legend>Messages &#9432;</legend>
+
+<div id="help"></div>
 
 <table></table>
 <button> + </button>
-</fieldset>
 `;
-        this._table = this.shadowRoot.querySelector('table');
-        this._button = this.shadowRoot.querySelector('button');
+        this._setHelp();
+        this._table = this.querySelector('table');
+        this._button = this.querySelector('button');
         this._button.addEventListener('click', () => this._handleNew());
 
         this._cfg.subscribe((newCfg) => this.config = newCfg);
@@ -65,7 +66,7 @@ class BanterMessages extends GloballyStyledHTMLElement {
             this.config = this._cfg.last;
         };
         row.onsave = (banter) => {
-            let cfg = this._cfg.last.clone(); 
+            let cfg = this._cfg.last.clone();
             cfg.banters.push(banter);
             this._save(cfg);
         };
@@ -109,8 +110,126 @@ class BanterMessages extends GloballyStyledHTMLElement {
         }
         this._cfg.save(cfg);
     }
+
+    private _setHelp() {
+        let helpToggle = this.querySelector('legend');
+
+        let helpHTML = document.createElement('div');
+        helpHTML.innerHTML = `
+<h3>Custom Commands and Messages</h3>
+<p>
+You can define custom chat commands and messages to provide information and interactions
+to chat. To create a new command, click the <code>+</code> button in the bottom left. A
+new empty row will appear. 
+</p>
+
+<dl>
+    <dt>Command</dt>
+    <dd>The command users will type into chat to get this message. It must
+        begin with <code>!</code> and must be a single word.
+    </dd>
+
+    <dt>Text</dt>
+    <dd>The text sent to the chat when the command is activated by a user or
+        as a random command. This text can have special placeholder values that
+        are replaced before the message is sent to chat. These placeholders are
+        described below.
+    </dd>
+
+    <dt>Enabled</dt>
+    <dd>If not enabled, this command can't be invoked by users, won't be selected
+        as a random command, and won't appear in the command list reported by
+        <code>!banter</code>.
+    </dd>
+
+    <dt>Random</dt>
+    <dd>If checked, this command can be randomly selected and sent to the channel.</dd>
+</dl>
+
+    <h4>Message Processing</h4>
+
+<p>
+When a command is triggered by a user in chat the text will go through processing
+before being sent to chat. The text can include special values that will be
+replaced with something based on context.
+</p>
+
+<p>
+The placeholders begin and end with double curly braces: (<code>{{ placholder }}</code>).
+One placeholder is <code>.PostCommand</code>, representing all the text that
+came after the <code>!command</code>. For example, say you created a command
+<code>!said</code> with the text <code>You said "{{ .PostCommand }}". That's cool!</code>.
+If a user entered <code>!said this is an apple</code>, <code>banter</code>
+would send to the channel <code>You said "this is an apple". That's cool!</code>
+</p>
+
+<p>
+The <code>.Sender</code> placeholder has data about the user who ran the command.
+You can access specific pieces of data about the user, for example:
+<code>{{ .Sender.DisplayName }}</code> will be replaced by sender's display name.
+The available details are:
+</p>
+
+<dl>
+<dt>Login</dt>
+<dd>The login of the sender</dd>
+
+<dt>DisplayName</dt>
+<dd>The display name of the sender</dd>
+
+<dt>BroadcasterType</dt>
+<dd><code>affiliate</code> for an affiliate, <code>partner</code> for a partner, and nothing for neither</dd>
+
+<dt>Description</dt>
+<dd>The user’s description of their channel.</dd>
+</dl>
+
+<p>
+For example, give a command <code>!bonk</code> with the text
+<code>{{ .Sender.DisplayName }} bonks {{ .PostCommand }}</code> and the user
+<em>AutonomousKoi</em> enters <code>!bonk @SelfDrivingCarp</code>, <code>banter</code>
+will send to the channel <code>AutonomousKoi bonks @SelfDrivingCarp</code>.
+</p>
+
+<p>
+The <code>.Original</code> placeholder has details about the original message
+the user sent. It has details like <code>.Sender</code>. The available details are:
+</p>
+
+<dl>
+<dt>Text</dt>
+<dd>The complete text the user sent to the channel.</dd>
+
+<dt>IsMod</dt>
+<dd>Whether or not the sender is a channel mod.</dd>
+</dl>
+
+<p>
+It's possible to create invalid placeholders. If you save an invalid message
+<code>banter</code> will save it but it won't appear in chat. When an invalid
+command is run an error with details will be written to the logs.
+</p>
+
+<p>
+Under the hood <code>banter</code> is using Go's
+<a href="https://pkg.go.dev/text/template">text/template</a> for text processing.
+All of that package's functionality is available if you're adventerous. There's
+no limit to the length of the text <code>banter</code> will save for a command
+but there is a limit to the length of a valid chat message. The full details
+of the data available to the template are in the source for
+<a href="https://github.com/autonomouskoi/twitch/blob/main/twitch.pb.go">Sender</a>
+(a <code>User</code> struct) and
+<a href="https://github.com/autonomouskoi/twitch/blob/main/chat.pb.go">Original</a>
+(a <code>TwitchChatEventMessageIn</code> struct).
+</p>
+`;
+
+        let help = SectionHelp(helpToggle, helpHTML);
+        let helpPlaceholder = this.querySelector('#help');
+        this.replaceChild(help, helpPlaceholder);
+    }
 }
-customElements.define('banter-messages', BanterMessages);
+customElements.define('banter-messages', BanterMessages, { extends: 'fieldset' });
 
 class BanterRow extends HTMLTableRowElement {
     private _input_command: HTMLInputElement;

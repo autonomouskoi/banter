@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"sort"
@@ -23,6 +24,7 @@ import (
 	"github.com/autonomouskoi/akcore/modules/modutil"
 	"github.com/autonomouskoi/akcore/storage/kv"
 	"github.com/autonomouskoi/akcore/web/webutil"
+	"github.com/autonomouskoi/datastruct/mapset"
 	"github.com/autonomouskoi/twitch"
 )
 
@@ -77,6 +79,8 @@ type Banterer struct {
 	cfg           *Config
 	cooldowns     map[string]time.Time // random messages on cooldown aren't repeated
 	twitchProfile string
+
+	guestListSeen mapset.MapSet[string]
 }
 
 // Start banter
@@ -86,6 +90,9 @@ func (bb *Banterer) Start(ctx context.Context, deps *modutil.ModuleDeps) error {
 	bb.kv = deps.KV
 
 	bb.cooldowns = map[string]time.Time{}
+	if bb.guestListSeen == nil {
+		bb.guestListSeen = mapset.MapSet[string]{}
+	}
 
 	if err := bb.loadConfig(); err != nil {
 		return fmt.Errorf("loading config: %w", err)
@@ -230,6 +237,14 @@ func (bb *Banterer) handleChatMessageIn(msg *bus.BusMessage) *bus.BusMessage {
 	if err := bb.UnmarshalMessage(msg, ccm); err != nil {
 		return nil
 	}
+
+	bb.lock.Lock()
+	if !bb.guestListSeen.Has(ccm.Chatter.Id) {
+		go bb.handleFirstSeen(ccm.Chatter)
+		bb.guestListSeen.Add(ccm.Chatter.Id)
+	}
+	bb.lock.Unlock()
+
 	if !strings.HasPrefix(ccm.Message.Text, "!") {
 		return nil
 	}
@@ -368,6 +383,64 @@ func (bb *Banterer) sendRandAnnouncement() {
 	idx := rand.Int31n(int32(len(eligible)))
 	selected := eligible[idx]
 	bb.sendBanter(selected, nil)
+}
+
+func (bb *Banterer) handleFirstSeen(eventUser *twitch.EventUser) {
+	var guestListCommands []*GuestListCommand
+	bb.lock.Lock()
+COMMAND:
+	for _, glc := range bb.cfg.GuestListCommands {
+		for _, listName := range glc.GuestListNames {
+			gl := bb.cfg.GuestLists[listName]
+			if gl == nil {
+				continue
+			}
+			for _, listMember := range gl.Members {
+				if listMember.Id == eventUser.Id {
+					guestListCommands = append(guestListCommands, glc)
+					continue COMMAND
+				}
+			}
+		}
+	}
+	bb.lock.Unlock()
+	if len(guestListCommands) == 0 {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	user, err := twitch.GetUser(ctx, bb.bus, bb.twitchProfile, eventUser.Login)
+	if err != nil {
+		bb.Log.Error("getting twitch user",
+			"id", eventUser.Id,
+			"login", eventUser.Login,
+			"error", err.Error(),
+		)
+		return
+	}
+
+	buf := &bytes.Buffer{}
+	for _, glc := range guestListCommands {
+		buf.Reset()
+		if err := renderGuestListCommand(glc, user, buf); err != nil {
+			bb.Log.Error("rendering guest list command", "command", glc.Command, "error", err.Error())
+			continue
+		}
+		text := strings.TrimSpace(buf.String())
+		if len(text) == 0 {
+			return
+		}
+		bb.sendChat(buf.String())
+	}
+}
+
+func renderGuestListCommand(glc *GuestListCommand, user *twitch.User, w io.Writer) error {
+	tmpl, err := template.New("").Parse(glc.GetCommand())
+	if err != nil {
+		return fmt.Errorf("parsing template: %w", err)
+	}
+	return tmpl.Execute(w, user)
 }
 
 //go:embed icon.svg
