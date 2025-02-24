@@ -265,6 +265,8 @@ func (bb *Banterer) handleChatMessageIn(msg *bus.BusMessage) *bus.BusMessage {
 	bb.lock.Unlock()
 	if matchedBanter != nil {
 		bb.sendBanter(matchedBanter, ccm)
+	} else {
+		bb.sendIntegralCommand(cmd, ccm)
 	}
 
 	return nil
