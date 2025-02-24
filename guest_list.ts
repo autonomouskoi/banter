@@ -1,5 +1,7 @@
+import { SectionHelp } from "/help.js";
 import * as banterpb from '/m/banter/pb/banter_pb.js';
 import { Cfg } from './controller.js';
+import { twitch } from './twitch.js';
 
 class GuestLists extends HTMLFieldSetElement {
     private _button: HTMLButtonElement;
@@ -12,13 +14,15 @@ class GuestLists extends HTMLFieldSetElement {
         super();
 
         this.innerHTML = `
-<legend>Guest Lists</legend>
-<p>Guest lists are lists of Twitch users that you can refer to in other parts of Banter, such as Guest List Commands.<p>
+<legend>Guest Lists &#9432;</legend>
+
+<div id="help"></div>
 
 <table></table>
 <button> + </button>
 `;
 
+        this._setHelp();
         this._cfg = cfg;
         this._button = this.querySelector('button');
         this._button.addEventListener('click', () => this._newGuestList());
@@ -50,7 +54,7 @@ class GuestLists extends HTMLFieldSetElement {
             list.onDelete = () => this._deleteList(name);
             list.onEdit = () => this._edit.editing = name;
             this._table.appendChild(list);
-        })
+        });
     }
 
     private _newGuestList() {
@@ -75,11 +79,24 @@ class GuestLists extends HTMLFieldSetElement {
         delete cfg.guestLists[name];
         this._cfg.save(cfg);
     }
+
+    private _setHelp() {
+        let helpToggle = this.querySelector('legend');
+
+        let helpHTML = document.createElement('div');
+        helpHTML.innerHTML = `
+<p>Guest lists are lists of Twitch users that you can refer to in other parts of Banter,
+such as Guest List Commands.</p>`;
+
+        let help = SectionHelp(helpToggle, helpHTML);
+        let helpPlaceholder = this.querySelector('#help');
+        this.replaceChild(help, helpPlaceholder);
+    }
 }
 customElements.define('banter-guest-lists', GuestLists, { extends: 'fieldset' });
 
 class GuestChip extends HTMLDivElement {
-    constructor(guest: banterpb.GuestList_Member, onClick = () => {}) {
+    constructor(guest: banterpb.GuestList_Member, onClick = () => { }) {
         super();
 
         this.innerHTML = `${guest.login} <button> X </button>`;
@@ -114,13 +131,14 @@ class GuestListEdit extends HTMLDialogElement {
 }
 </style>
 
-<div class="flex-column">
+<div class="flex-column" style="gap: 1rem">
+<h3>Manage Guest List Members</h3>
 <section>
     <input type="text" size="30" placecholder="@selfdrivingcarp" />
     <button id="add"> + </button>
 </section>
 <section id="guests"></section>
-<section>
+<section style="align-self: flex-end">
     <button id="save">Save</button>
     <button id="cancel">Cancel</button>
 </section>
@@ -141,12 +159,21 @@ class GuestListEdit extends HTMLDialogElement {
 
         this._guests = this.querySelector('#guests');
 
+        let save = this.querySelector('#save');
+        save.addEventListener('click', () => this._save());
         let cancel = this.querySelector('#cancel');
         cancel.addEventListener('click', () => this.editing = '');
 
         this.editing = '';
 
         this._cfg = cfg;
+        this._cfg.subscribe((_) => this.editing = '');
+    }
+
+    private _save() {
+        let cfg = this._cfg.last.clone();
+        cfg.guestLists[this._name] = this._list;
+        this._cfg.save(cfg);
     }
 
     set editing(name: string) {
@@ -169,7 +196,7 @@ class GuestListEdit extends HTMLDialogElement {
 
     private _populateChips() {
         this._guests.textContent = '';
-        this._list.members.toSorted((a,b) => a.login.localeCompare(b.login))
+        this._list.members.toSorted((a, b) => a.login.localeCompare(b.login))
             .forEach((guest) => {
                 let chip = new GuestChip(guest, () => {
                     this._list.members = this._list.members.filter((member) => member.id !== guest.id);
@@ -184,17 +211,20 @@ class GuestListEdit extends HTMLDialogElement {
         if (!name) {
             return;
         }
-        // TODO: the lookup
-        let guest = new banterpb.GuestList_Member({
-            login: name,
-            id: name,
-        })  
-        if (this._list.members.some((v) => v.id === guest.id )) {
-            this._input.value = '';
-            return;
-        }
-        this._list.members.push(guest);
-        this._populateChips();
+        twitch.then((twitch) => {
+            return twitch.getUser(name);
+        }).then((gur) => {
+            let guest = new banterpb.GuestList_Member({
+                login: gur.login,
+                id: gur.user.id,
+            })
+            if (this._list.members.some((v) => v.id === guest.id)) {
+                this._input.value = '';
+                return;
+            }
+            this._list.members.push(guest);
+            this._populateChips();
+        });
     }
 }
 customElements.define('ak-guest-list-edit', GuestListEdit, { extends: 'dialog' });

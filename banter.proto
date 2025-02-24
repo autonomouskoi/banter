@@ -29,6 +29,11 @@ message GuestList {
     repeated  Member  members = 1;
 }
 
+message GuestListCommand {
+              string  command = 1;
+    repeated  string  guest_list_names = 2;
+}
+
 message Config {
     reserved 7;
     
@@ -38,7 +43,9 @@ message Config {
               EventSettings  channel_raid     = 4;
               EventSettings  channel_follow   = 5;
               EventSettings  channel_cheer    = 6;
-    map<string, GuestList>   guest_lists      = 8;
+
+    map<string, GuestList>        guest_lists         = 8;
+    map<string, GuestListCommand> guest_list_commands = 9;
 }
 
 enum MessageTypeRequest {

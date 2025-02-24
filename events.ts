@@ -1,8 +1,8 @@
+import { SectionHelp } from "/help.js";
 import * as banterpb from '/m/banter/pb/banter_pb.js';
-import { GloballyStyledHTMLElement } from "/global-styles.js";
 import { Cfg } from './controller.js';
 
-class Events extends GloballyStyledHTMLElement {
+class Events extends HTMLFieldSetElement {
     private _table: HTMLTableElement;
 
     private _cfg: Cfg;
@@ -12,15 +12,16 @@ class Events extends GloballyStyledHTMLElement {
         super();
         this._cfg = cfg;
 
-        this.shadowRoot.innerHTML = `
-<fieldset>
-<legend>Events</legend>
+        this.innerHTML = `
+<legend>Events &#9432;</legend>
+
+<div id="help"></div>
 
 <table></table>
-</fieldset>
 `;
 
-        this._table = this.shadowRoot.querySelector('table');
+        this._setHelp();
+        this._table = this.querySelector('table');
         this._cfg.subscribe((newCfg) => this.config = newCfg );
         this.config = this._cfg.last;
     }
@@ -77,8 +78,69 @@ class Events extends GloballyStyledHTMLElement {
             er.disabled = editKey !== key;
         });
     }
+
+    private _setHelp() {
+        let helpToggle = this.querySelector('legend');
+
+        let helpHTML = document.createElement('div');
+        helpHTML.innerHTML = `
+<p>
+Banter can send custom messages to chat when certain events occur. The messages can contain
+special placeholder values that will incorporate information about the event into the chat
+message.
+</p>
+
+<h3>Raid Placeholders</h3>
+<dl>
+    <dt><code>{{ .FromBroadcaster.Login }}</code></dt>
+        <dd>The login name of the raider</dd>
+    <dt><code>{{ .FromBroadcaster.Name }}</code></dt>
+        <dd>The display name of the raider</dd>
+    <dt><code>{{ .ToBroadcaster.Login }}</code></dt>
+        <dd>The login name of the raided</dd>
+    <dt><code>{{ .ToBroadcaster.Name }}</code></dt>
+        <dd>The display name of the raided</dd>
+    <dt><code>{{ .Viewers }}</code></dt>
+        <dd>The number of viewers included in the raid</dd>
+</dl>
+
+<h3>Follow Placeholders</h3>
+<dl>
+    <dt><code>{{ .Follower.Login }}</code></dt>
+        <dd>The login name of the follower</dd>
+    <dt><code>{{ .Follower.Name }}</code></dt>
+        <dd>The display name of the follower</dd>
+    <dt><code>{{ .ToBroadcaster.Login }}</code></dt>
+        <dd>The login name of the followed</dd>
+    <dt><code>{{ .ToBroadcaster.Name }}</code></dt>
+        <dd>The display name of the followed</dd>
+</dl>
+
+<h3>Cheer Placeholders</h3>
+<dl>
+    <dt><code>{{ .IsAnonymous }}</code></dt>
+        <dd><code>true</code> or <code>false</code>, whether or not the cheer was anonymous</dd>
+    <dt><code>{{ .From.Login }}</code></dt>
+        <dd>The login name of the cheerer</dd>
+    <dt><code>{{ .From.Name }}</code></dt>
+        <dd>The display name of the cheerer</dd>
+    <dt><code>{{ .Broadcaster.Login }}</code></dt>
+        <dd>The login name of the cheered</dd>
+    <dt><code>{{ .Broadcaster.Name }}</code></dt>
+        <dd>The display name of the cheered</dd>
+    <dt><code>{{ .Message }}</code></dt>
+        <dd>The message associated with the cheer</dd>
+    <dt><code>{{ .Bits }}</code><dt>
+        <dd>The number of bits cheered</dd>
+</dl>
+`;
+
+        let help = SectionHelp(helpToggle, helpHTML);
+        let helpPlaceholder = this.querySelector('#help');
+        this.replaceChild(help, helpPlaceholder);
+    }
 }
-customElements.define('banter-events', Events);
+customElements.define('banter-events', Events, {extends: 'fieldset'});
 
 class EventRow extends HTMLTableRowElement {
     private _input_text: HTMLInputElement;
