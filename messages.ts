@@ -1,121 +1,9 @@
-import { SectionHelp } from "/help.js";
 import * as banterpb from '/m/banter/pb/banter_pb.js';
 import { Cfg } from './controller.js';
+import { UpdatingControlPanel } from '/tk.js';
 
-class BanterMessages extends HTMLFieldSetElement {
-    private _table: HTMLTableElement;
-    private _button: HTMLButtonElement;
-
-    private _rows: BanterRow[] = [];
-    private _cfg: Cfg;
-
-    constructor(cfg: Cfg) {
-        super();
-        this._cfg = cfg;
-
-        this.innerHTML = `
-<legend>Messages &#9432;</legend>
-
-<div id="help"></div>
-
-<table></table>
-<button> + </button>
-`;
-        this._setHelp();
-        this._table = this.querySelector('table');
-        this._button = this.querySelector('button');
-        this._button.addEventListener('click', () => this._handleNew());
-
-        this._cfg.subscribe((newCfg) => this.config = newCfg);
-        this.config = this._cfg.last;
-    }
-
-    set config(cfg: banterpb.Config) {
-        this._table.innerHTML = `
-<tr>
-    <th>Command</th>
-    <th>Text</th>
-    <th>Enabled</th>
-    <th>Random</th>
-    <th>Edit</th>
-</tr>
-`;
-        this._rows = cfg.banters.map((banter, i) => {
-            let row = new BanterRow();
-            row.banter = banter;
-            row.oncancel = () => this._cancelEditing();
-            row.onedit = () => this._setEditing(i);
-            row.onsave = (banter) => {
-                let cfg = this._cfg.last.clone();
-                cfg.banters[i] = banter;
-                this._save(cfg);
-            };
-            row.ondelete = () => this._delete(i);
-            return row;
-        });
-        this._rows.forEach((row) => {
-            this._table.appendChild(row);
-        })
-    }
-
-    private _handleNew() {
-        let row = new BanterRow();
-        row.banter = new banterpb.Banter();
-        row.oncancel = () => {
-            this._cancelEditing();
-            this.config = this._cfg.last;
-        };
-        row.onsave = (banter) => {
-            let cfg = this._cfg.last.clone();
-            cfg.banters.push(banter);
-            this._save(cfg);
-        };
-        this._rows.push(row);
-        this._table.appendChild(row);
-        row.startEdit();
-        this._setEditing(this._rows.length - 1);
-    }
-
-    private _setEditing(idx: number) {
-        this._button.disabled = true;
-        this._rows.forEach((row, i) => {
-            row.disabled = i != idx;
-        })
-    }
-
-    private _cancelEditing() {
-        this._button.disabled = false;
-        this._rows.forEach((row) => {
-            row.disabled = false;
-        });
-    }
-
-    private _delete(i: number) {
-        let cfg = this._cfg.last
-        if (i < 0 || i >= cfg.banters?.length) {
-            return;
-        }
-        let banter = cfg.banters[i];
-        if (!confirm(`Delete ${banter.command}?`)) {
-            return;
-        }
-        cfg = cfg.clone();
-        cfg.banters.splice(i, 1);
-        this._save(cfg);
-    }
-
-    private _save(cfg: banterpb.Config) {
-        if (this._rows.find((row) => !row.isValid)) {
-            return;
-        }
-        this._cfg.save(cfg);
-    }
-
-    private _setHelp() {
-        let helpToggle = this.querySelector('legend');
-
-        let helpHTML = document.createElement('div');
-        helpHTML.innerHTML = `
+let help = document.createElement('div');
+help.innerHTML = `
 <h3>Custom Commands and Messages</h3>
 <p>
 You can define custom chat commands and messages to provide information and interactions
@@ -224,9 +112,102 @@ of the data available to the template are in the source for
 </p>
 `;
 
-        let help = SectionHelp(helpToggle, helpHTML);
-        let helpPlaceholder = this.querySelector('#help');
-        this.replaceChild(help, helpPlaceholder);
+class BanterMessages extends UpdatingControlPanel<banterpb.Config> {
+    private _table: HTMLTableElement;
+    private _button: HTMLButtonElement;
+
+    private _rows: BanterRow[] = [];
+
+    constructor(cfg: Cfg) {
+        super({ title: 'Messages', help, data: cfg });
+
+        this.innerHTML = `
+<table></table>
+<button> + </button>
+`;
+        this._table = this.querySelector('table');
+        this._button = this.querySelector('button');
+        this._button.addEventListener('click', () => this._handleNew());
+    }
+
+    update(cfg: banterpb.Config) {
+        this._table.innerHTML = `
+<tr>
+    <th>Command</th>
+    <th>Text</th>
+    <th>Enabled</th>
+    <th>Random</th>
+    <th>Edit</th>
+</tr>
+`;
+        this._rows = cfg.banters.map((banter, i) => {
+            let row = new BanterRow();
+            row.banter = banter;
+            row.oncancel = () => this._cancelEditing();
+            row.onedit = () => this._setEditing(i);
+            row.onsave = (banter) => {
+                let cfg = this.last.clone();
+                cfg.banters[i] = banter;
+                this._save(cfg);
+            };
+            row.ondelete = () => this._delete(i);
+            return row;
+        });
+        this._rows.forEach((row) => {
+            this._table.appendChild(row);
+        })
+    }
+
+    private _handleNew() {
+        let row = new BanterRow();
+        row.banter = new banterpb.Banter();
+        row.oncancel = () => {
+            this._cancelEditing();
+        };
+        row.onsave = (banter) => {
+            let cfg = this.last.clone();
+            cfg.banters.push(banter);
+            this._save(cfg);
+        };
+        this._rows.push(row);
+        this._table.appendChild(row);
+        row.startEdit();
+        this._setEditing(this._rows.length - 1);
+    }
+
+    private _setEditing(idx: number) {
+        this._button.disabled = true;
+        this._rows.forEach((row, i) => {
+            row.disabled = i != idx;
+        })
+    }
+
+    private _cancelEditing() {
+        this._button.disabled = false;
+        this._rows.forEach((row) => {
+            row.disabled = false;
+        });
+    }
+
+    private _delete(i: number) {
+        let cfg = this.last
+        if (i < 0 || i >= cfg.banters?.length) {
+            return;
+        }
+        let banter = cfg.banters[i];
+        if (!confirm(`Delete ${banter.command}?`)) {
+            return;
+        }
+        cfg = cfg.clone();
+        cfg.banters.splice(i, 1);
+        this._save(cfg);
+    }
+
+    private _save(cfg: banterpb.Config) {
+        if (this._rows.find((row) => !row.isValid)) {
+            return;
+        }
+        this.save(cfg);
     }
 }
 customElements.define('banter-messages', BanterMessages, { extends: 'fieldset' });

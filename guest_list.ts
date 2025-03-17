@@ -1,41 +1,35 @@
-import { SectionHelp } from "/help.js";
 import * as banterpb from '/m/banter/pb/banter_pb.js';
 import { Cfg } from './controller.js';
 import { twitch } from './twitch.js';
+import { UpdatingControlPanel } from '/tk.js';
 
-class GuestLists extends HTMLFieldSetElement {
+let help = document.createElement('div');
+help.innerHTML = `
+<p>Guest lists are lists of Twitch users that you can refer to in other parts of Banter,
+such as Guest List Commands.</p>`;
+
+class GuestLists extends UpdatingControlPanel<banterpb.Config> {
     private _button: HTMLButtonElement;
     private _table: HTMLTableElement;
     private _edit: GuestListEdit;
 
-    private _cfg: Cfg;
-
     constructor(cfg: Cfg) {
-        super();
+        super({ title: 'Guest Lists', help, data: cfg });
 
         this.innerHTML = `
-<legend>Guest Lists &#9432;</legend>
-
-<div id="help"></div>
-
 <table></table>
 <button> + </button>
 `;
 
-        this._setHelp();
-        this._cfg = cfg;
         this._button = this.querySelector('button');
         this._button.addEventListener('click', () => this._newGuestList());
         this._table = this.querySelector('table');
 
-        this._edit = new GuestListEdit(this._cfg);
+        this._edit = new GuestListEdit(cfg);
         this.appendChild(this._edit);
-
-        this._cfg.subscribe((newCfg) => this.config = newCfg);
-        this.config = this._cfg.last;
     }
 
-    set config(cfg: banterpb.Config) {
+    update(cfg: banterpb.Config) {
         let names = Object.keys(cfg.guestLists)
         if (names.length === 0) {
             this._table.textContent = '';
@@ -59,38 +53,25 @@ class GuestLists extends HTMLFieldSetElement {
 
     private _newGuestList() {
         let name = prompt('Guest list name');
-        if (this._cfg.last.guestLists[name]) {
+        if (this.last.guestLists[name]) {
             alert('name already in use');
             return;
         }
         if (!name) {
             return;
         }
-        let cfg = this._cfg.last.clone();
+        let cfg = this.last.clone();
         cfg.guestLists[name] = new banterpb.GuestList();
-        this._cfg.save(cfg);
+        this.save(cfg);
     }
 
     private _deleteList(name: string) {
         if (!confirm(`Delete Guest List ${name}?`)) {
             return;
         }
-        let cfg = this._cfg.last.clone();
+        let cfg = this.last.clone();
         delete cfg.guestLists[name];
-        this._cfg.save(cfg);
-    }
-
-    private _setHelp() {
-        let helpToggle = this.querySelector('legend');
-
-        let helpHTML = document.createElement('div');
-        helpHTML.innerHTML = `
-<p>Guest lists are lists of Twitch users that you can refer to in other parts of Banter,
-such as Guest List Commands.</p>`;
-
-        let help = SectionHelp(helpToggle, helpHTML);
-        let helpPlaceholder = this.querySelector('#help');
-        this.replaceChild(help, helpPlaceholder);
+        this.save(cfg);
     }
 }
 customElements.define('banter-guest-lists', GuestLists, { extends: 'fieldset' });

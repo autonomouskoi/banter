@@ -1,89 +1,9 @@
-import { SectionHelp } from "/help.js";
 import * as banterpb from '/m/banter/pb/banter_pb.js';
 import { Cfg } from './controller.js';
+import { UpdatingControlPanel } from '/tk.js';
 
-class Events extends HTMLFieldSetElement {
-    private _table: HTMLTableElement;
-
-    private _cfg: Cfg;
-    private _rows: { [key: string]: EventRow } = {};
-
-    constructor(cfg: Cfg) {
-        super();
-        this._cfg = cfg;
-
-        this.innerHTML = `
-<legend>Events &#9432;</legend>
-
-<div id="help"></div>
-
-<table></table>
-`;
-
-        this._setHelp();
-        this._table = this.querySelector('table');
-        this._cfg.subscribe((newCfg) => this.config = newCfg );
-        this.config = this._cfg.last;
-    }
-
-    set config(cfg: banterpb.Config) {
-        this._table.innerHTML = `
-<tr>
-    <th>Event</th>
-    <th>Enabled</th>
-    <th>Text</th>
-    <th>Edit</th>
-</tr>
-`;
-        this._rows = {};
-        let raid = new EventRow({ name: 'Raid', settings: cfg.channelRaid });
-        raid.onsave = (es) => {
-            let cfg = this._cfg.last.clone();
-            cfg.channelRaid = es;
-            this._cfg.save(cfg);
-        }
-        this._rows['Raid'] = raid;
-        let follow = new EventRow({ name: 'Follow', settings: cfg.channelFollow });
-        follow.onsave = (es) => {
-            let cfg = this._cfg.last.clone();
-            cfg.channelFollow = es;
-            this._cfg.save(cfg);
-        }
-        this._rows['Follow'] = follow;
-        let cheer  = new EventRow({ name: 'Cheer', settings: cfg.channelCheer });
-        cheer.onsave = (es) => {
-            let cfg = this._cfg.last.clone();
-            cfg.channelCheer = es;
-            this._cfg.save(cfg);
-        }
-        this._rows['Cheer'] = cheer;
-
-        Object.keys(this._rows).forEach((key) => {
-            let er = this._rows[key];
-            er.oncancel = () => this._cancelEditing();
-            er.onedit = () => this._setEditing(key);
-            this._table.appendChild(er);
-        });
-    }
-
-    private _cancelEditing() {
-        Object.keys(this._rows).forEach((key) => {
-            this._rows[key].disabled = false;
-        }); 
-    }
-
-    private _setEditing(editKey: string) {
-        Object.keys(this._rows).forEach((key) => {
-            let er = this._rows[key];
-            er.disabled = editKey !== key;
-        });
-    }
-
-    private _setHelp() {
-        let helpToggle = this.querySelector('legend');
-
-        let helpHTML = document.createElement('div');
-        helpHTML.innerHTML = `
+let help = document.createElement('div');
+help.innerHTML = `
 <p>
 Banter can send custom messages to chat when certain events occur. The messages can contain
 special placeholder values that will incorporate information about the event into the chat
@@ -135,12 +55,75 @@ message.
 </dl>
 `;
 
-        let help = SectionHelp(helpToggle, helpHTML);
-        let helpPlaceholder = this.querySelector('#help');
-        this.replaceChild(help, helpPlaceholder);
+class Events extends UpdatingControlPanel<banterpb.Config> {
+    private _table: HTMLTableElement;
+
+    private _rows: { [key: string]: EventRow } = {};
+
+    constructor(cfg: Cfg) {
+        super({ title: 'Events', help, data: cfg });
+
+        this.innerHTML = `
+<table></table>
+`;
+
+        this._table = this.querySelector('table');
+    }
+
+    update(cfg: banterpb.Config) {
+        this._table.innerHTML = `
+<tr>
+    <th>Event</th>
+    <th>Enabled</th>
+    <th>Text</th>
+    <th>Edit</th>
+</tr>
+`;
+        this._rows = {};
+        let raid = new EventRow({ name: 'Raid', settings: cfg.channelRaid });
+        raid.onsave = (es) => {
+            let cfg = this.last.clone();
+            cfg.channelRaid = es;
+            this.save(cfg);
+        }
+        this._rows['Raid'] = raid;
+        let follow = new EventRow({ name: 'Follow', settings: cfg.channelFollow });
+        follow.onsave = (es) => {
+            let cfg = this.last.clone();
+            cfg.channelFollow = es;
+            this.save(cfg);
+        }
+        this._rows['Follow'] = follow;
+        let cheer = new EventRow({ name: 'Cheer', settings: cfg.channelCheer });
+        cheer.onsave = (es) => {
+            let cfg = this.last.clone();
+            cfg.channelCheer = es;
+            this.save(cfg);
+        }
+        this._rows['Cheer'] = cheer;
+
+        Object.keys(this._rows).forEach((key) => {
+            let er = this._rows[key];
+            er.oncancel = () => this._cancelEditing();
+            er.onedit = () => this._setEditing(key);
+            this._table.appendChild(er);
+        });
+    }
+
+    private _cancelEditing() {
+        Object.keys(this._rows).forEach((key) => {
+            this._rows[key].disabled = false;
+        });
+    }
+
+    private _setEditing(editKey: string) {
+        Object.keys(this._rows).forEach((key) => {
+            let er = this._rows[key];
+            er.disabled = editKey !== key;
+        });
     }
 }
-customElements.define('banter-events', Events, {extends: 'fieldset'});
+customElements.define('banter-events', Events, { extends: 'fieldset' });
 
 class EventRow extends HTMLTableRowElement {
     private _input_text: HTMLInputElement;
