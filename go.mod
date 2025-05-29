@@ -5,10 +5,10 @@ go 1.23.0
 toolchain go1.23.4
 
 require (
-	github.com/autonomouskoi/akcore v0.1.0
+	github.com/autonomouskoi/akcore v0.1.2
 	github.com/autonomouskoi/datastruct v0.0.13
-	github.com/autonomouskoi/mageutil v0.0.16
-	github.com/autonomouskoi/twitch v0.0.19
+	github.com/autonomouskoi/mageutil v0.0.18
+	github.com/autonomouskoi/twitch v0.0.21
 	github.com/magefile/mage v1.15.0
 	golang.org/x/sync v0.13.0
 	google.golang.org/protobuf v1.36.6
