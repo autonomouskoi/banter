@@ -7,6 +7,7 @@ import { BanterMessages } from "./messages.js";
 import { Events } from "./events.js";
 import { GuestLists } from "./guest_list.js";
 import { GuestListCommands } from "./guest_list_commands.js";
+import { General } from "./general.js";
 
 const TOPIC_REQUEST = enumName(banterpb.BusTopic, banterpb.BusTopic.BANTER_REQUEST);
 
@@ -18,6 +19,7 @@ function start(mainContainer: HTMLElement) {
 
     bus.waitForTopic(TOPIC_REQUEST, 5000)
         .then(() => {
+            mainContainer.appendChild(new General(cfg));
             mainContainer.appendChild(new BanterMessages(cfg));
             mainContainer.appendChild(new Random(cfg));
             mainContainer.appendChild(new Events(cfg));

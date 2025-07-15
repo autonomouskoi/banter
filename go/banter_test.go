@@ -10,7 +10,7 @@ import (
 
 	"github.com/autonomouskoi/akcore/bus"
 	"github.com/autonomouskoi/akcore/bus/bustest"
-	"github.com/autonomouskoi/banter"
+	banter "github.com/autonomouskoi/banter/go"
 	"github.com/autonomouskoi/twitch"
 )
 

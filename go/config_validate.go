@@ -3,25 +3,25 @@ package banter
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
+	"github.com/autonomouskoi/core-tinygo/svc"
 	"github.com/autonomouskoi/datastruct/mapset"
-	"github.com/autonomouskoi/twitch"
+	"github.com/autonomouskoi/twitch-tinygo"
 )
 
 var (
-	TestUser = &twitch.User{
-		Id:              "id",
-		Login:           "login",
-		DisplayName:     "display name",
-		Type:            "type",
-		BroadcasterType: "broadcaster type",
-		Description:     "description",
-		ProfileImageUrl: "profile image URL",
-		OfflineImageUrl: "offline image URL",
+	TestSender = &twitch.User{
+		Id:              "sender id",
+		Login:           "sender login",
+		DisplayName:     "sender display name",
+		Type:            "sender type",
+		BroadcasterType: "sender broadcaster type",
+		Description:     "sender description",
+		ProfileImageUrl: "sender profile image URL",
+		OfflineImageUrl: "sender offline image URL",
 		ViewCount:       123,
-		Email:           "email",
+		Email:           "sender email",
 		CreatedAt:       1740162543,
 	}
 )
@@ -62,8 +62,12 @@ func (cfg *Config) validateBanters() error {
 }
 
 func (cfg *Config) validateGuestListCommands() error {
+	b, err := TestSender.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("marshalling test user: %w", err)
+	}
 	for name, glc := range cfg.GuestListCommands {
-		if err := renderGuestListCommand(glc, TestUser, io.Discard); err != nil {
+		if _, err := svc.RenderTemplate(glc.GetCommand(), b); err != nil {
 			return fmt.Errorf("command %s: %w", name, err)
 		}
 	}

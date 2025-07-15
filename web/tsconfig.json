@@ -1,0 +1,33 @@
+{
+    "compilerOptions": {
+        "lib": [
+            "DOM",
+            "ESNext"
+        ],
+        "module": "Node16",
+        "moduleResolution": "node16",
+        "noImplicitAny": true,
+        "outDir": "out/",
+        "paths": {
+            "/m/banter/pb/*": [
+                "./out/pb/*"
+            ],
+            "/m/banter/*": [
+                "./*"
+            ],
+            "/m/twitch/pb/*": [
+                "../../twitch/web/pb/*"
+            ],
+            "/m/twitch/*": [
+                "../../twitch/web/*"
+            ],
+            "/*": [
+                "../../akcore/web/content/out/*"
+            ]
+        },
+        "target": "ESNext"
+    },
+    "include": [
+        "*ts",
+    ],
+}

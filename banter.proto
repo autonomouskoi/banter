@@ -3,6 +3,9 @@ package banter;
 
 option go_package = "github.com/autonomouskoi/banter";
 
+import "twitch/eventsub.proto";
+import "twitch/twitch.proto";
+
 enum BusTopic {
    BANTER_EVENT   = 0;
    BANTER_REQUEST = 1;
@@ -14,6 +17,7 @@ message Banter {
     string  text     = 2;
     bool    disabled = 3;
     bool    random   = 4;
+    int32   id       = 5;
 }
 
 message EventSettings {
@@ -46,16 +50,29 @@ message Config {
 
     map<string, GuestList>        guest_lists         = 8;
     map<string, GuestListCommand> guest_list_commands = 9;
+    string                        send_as             = 10;
+    string                        send_to             = 11;
 }
 
 enum MessageTypeRequest {
-    CONFIG_GET_REQ  = 0;
-    CONFIG_GET_RESP = 1;
+    CONFIG_GET_REQ      = 0;
+    CONFIG_GET_RESP     = 1;
+    BANTER_RENDER_REQ  = 2;
+    BANTER_RENDER_RESP = 3;
 }
 
 message ConfigGetRequest {}
 message ConfigGetResponse {
     Config  config = 1;
+}
+
+message BanterRenderRequest {
+              Banter                          banter   = 1;
+              twitch.EventChannelChatMessage  original = 2;
+    optional  twitch.User                     sender   = 3;
+}
+message BanterRenderResponse {
+    string  output = 1;
 }
 
 enum MessageTypeCommand {
