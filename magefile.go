@@ -138,9 +138,10 @@ func mkPluginDir() error {
 func WASM() error {
 	mg.Deps(mkPluginDir, GoProtos)
 
-	srcDir := filepath.Join(baseDir, "go", "main")
+	goDir := filepath.Join(baseDir, "go")
+	srcDir := filepath.Join(goDir, "main")
 	outFile := filepath.Join(pluginDir, "banter.wasm")
-	return mageutil.TinyGoWASM(srcDir, outFile)
+	return mageutil.TinyGoWASM(outFile, srcDir, goDir)
 }
 
 // Copy our icon

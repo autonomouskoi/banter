@@ -35,11 +35,12 @@ func (bb *Banterer) sendShoutout(cmd string, ccm *twitch.EventChannelChatMessage
 		bus.MarshalMessage(msg, &twitch.SendShoutoutRequest{
 			FromProfile:     bb.cfg.GetSendAs(),
 			ToBroadcasterId: resp.GetUser().Id,
-			ModeratorId:     ccm.Chatter.Id,
+			FromChannel:     bb.cfg.GetSendTo(),
 		})
 		if msg.Error != nil {
 			return
 		}
+		bus.LogInfo("queing shoutout", "for", part, "mod", ccm.Chatter.Login, "in", bb.cfg.GetSendTo())
 		bus.Send(msg)
 	}
 }
