@@ -67,8 +67,10 @@ func (cfg *Config) validateGuestListCommands() error {
 		return fmt.Errorf("marshalling test user: %w", err)
 	}
 	for name, glc := range cfg.GuestListCommands {
-		if _, err := svc.RenderTemplate(glc.GetCommand(), b); err != nil {
-			return fmt.Errorf("command %s: %w", name, err)
+		if glc.GetCommand() != "" {
+			if _, err := svc.RenderTemplate(glc.GetCommand(), b); err != nil {
+				return fmt.Errorf("command %s: %w", name, err)
+			}
 		}
 	}
 	return nil
